@@ -12,6 +12,12 @@
 - macOS
 - Linux
 
+## インストール
+
+```bash
+go install github.com/stoneream/shokushitsu/cmd/shoku@latest
+```
+
 ## 使い方
 
 ### 起動方法

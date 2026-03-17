@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/stoneream/shokushitsu/internal/tui/theme"
 )
 
 type Action string
@@ -29,14 +30,14 @@ const (
 )
 
 var (
-	styleTitle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))
-	styleCursor     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))
-	styleTrack      = lipgloss.NewStyle().Foreground(lipgloss.Color("111"))
-	styleSummary    = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	styleQuit       = lipgloss.NewStyle().Foreground(lipgloss.Color("244"))
-	styleGuide      = lipgloss.NewStyle().Foreground(lipgloss.Color("248"))
-	stylePromptText = lipgloss.NewStyle().Foreground(lipgloss.Color("220"))
-	styleError      = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	styleTitle      = lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	styleCursor     = lipgloss.NewStyle().Bold(true).Foreground(theme.Accent)
+	styleTrack      = lipgloss.NewStyle().Foreground(theme.Accent)
+	styleSummary    = lipgloss.NewStyle().Foreground(theme.Primary)
+	styleQuit       = lipgloss.NewStyle().Foreground(theme.Muted)
+	styleGuide      = lipgloss.NewStyle().Foreground(theme.Muted)
+	stylePromptText = lipgloss.NewStyle().Foreground(theme.Attention)
+	styleError      = lipgloss.NewStyle().Foreground(theme.Attention)
 )
 
 func Run(summaryDates []string) (Result, error) {

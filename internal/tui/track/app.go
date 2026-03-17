@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stoneream/shokushitsu/internal/notify"
 	"github.com/stoneream/shokushitsu/internal/storage/sqlite"
+	"github.com/stoneream/shokushitsu/internal/tui/theme"
 )
 
 const (
@@ -22,12 +23,12 @@ const (
 )
 
 var (
-	styleTitle       = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86"))
-	styleCursor      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))
-	styleProjectName = lipgloss.NewStyle().Foreground(lipgloss.Color("111"))
-	styleTaskName    = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	styleNewAction   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("141"))
-	styleNotice      = lipgloss.NewStyle().Foreground(lipgloss.Color("220"))
+	styleTitle       = lipgloss.NewStyle().Bold(true).Foreground(theme.Primary)
+	styleCursor      = lipgloss.NewStyle().Bold(true).Foreground(theme.Accent)
+	styleProjectName = lipgloss.NewStyle().Foreground(theme.Primary)
+	styleTaskName    = lipgloss.NewStyle().Foreground(theme.Accent)
+	styleNewAction   = lipgloss.NewStyle().Bold(true).Foreground(theme.Attention)
+	styleNotice      = lipgloss.NewStyle().Foreground(theme.Attention)
 )
 
 type screenState int

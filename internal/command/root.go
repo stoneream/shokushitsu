@@ -10,6 +10,7 @@ import (
 	"github.com/stoneream/shokushitsu/internal/config"
 	"github.com/stoneream/shokushitsu/internal/storage/sqlite"
 	hometui "github.com/stoneream/shokushitsu/internal/tui/home"
+	tracktui "github.com/stoneream/shokushitsu/internal/tui/track"
 )
 
 const japaneseHelpTemplate = `{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
@@ -65,28 +66,40 @@ func newRootCmd() *cobra.Command {
 			DisableDefaultCmd: true,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			summaryDates, err := loadSummaryDates(context.Background())
-			if err != nil {
-				return err
-			}
-
-			result, err := hometui.Run(summaryDates)
-			if err != nil {
-				return err
-			}
-
-			switch result.Action {
-			case hometui.ActionTrack:
-				return executeCommand(trackCmd)
-			case hometui.ActionSummary:
-				if err := summaryCmd.Flags().Set("date", result.SummaryDate); err != nil {
+			for {
+				summaryDates, err := loadSummaryDates(context.Background())
+				if err != nil {
 					return err
 				}
-				return executeCommand(summaryCmd)
-			case hometui.ActionQuit:
-				return nil
-			default:
-				return fmt.Errorf("unknown action: %s", result.Action)
+
+				result, err := hometui.Run(summaryDates)
+				if err != nil {
+					return err
+				}
+
+				switch result.Action {
+				case hometui.ActionTrack:
+					trackResult, err := runTrack(cmd.Context())
+					if err != nil {
+						return err
+					}
+					if trackResult.Message != "" {
+						fmt.Fprintln(cmd.OutOrStdout(), trackResult.Message)
+					}
+					if trackResult.Action == tracktui.ActionReturnHome {
+						continue
+					}
+					return nil
+				case hometui.ActionSummary:
+					if err := summaryCmd.Flags().Set("date", result.SummaryDate); err != nil {
+						return err
+					}
+					return executeCommand(summaryCmd)
+				case hometui.ActionQuit:
+					return nil
+				default:
+					return fmt.Errorf("unknown action: %s", result.Action)
+				}
 			}
 		},
 	}

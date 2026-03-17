@@ -36,47 +36,47 @@ func New(root Screen, ctx *Context) *Model {
 	}
 }
 
-func (m *Model) Init() tea.Cmd {
-	current := m.Current()
+func (model *Model) Init() tea.Cmd {
+	current := model.Current()
 	if current == nil {
 		return tea.Quit
 	}
-	return current.Init(m)
+	return current.Init(model)
 }
 
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	current := m.Current()
+func (model *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	current := model.Current()
 	if current == nil {
-		return m, tea.Quit
+		return model, tea.Quit
 	}
-	return m, current.Update(msg, m)
+	return model, current.Update(msg, model)
 }
 
-func (m *Model) View() string {
-	current := m.Current()
+func (model *Model) View() string {
+	current := model.Current()
 	if current == nil {
 		return ""
 	}
 	return current.View()
 }
 
-func (m *Model) Context() *Context {
-	return m.ctx
+func (model *Model) Context() *Context {
+	return model.ctx
 }
 
-func (m *Model) Current() Screen {
-	return m.current
+func (model *Model) Current() Screen {
+	return model.current
 }
 
-func (m *Model) Replace(next Screen) tea.Cmd {
+func (model *Model) Replace(next Screen) tea.Cmd {
 	if next == nil {
 		return nil
 	}
 
-	m.current = next
-	return next.Init(m)
+	model.current = next
+	return next.Init(model)
 }
 
-func (m *Model) Quit() tea.Cmd {
+func (model *Model) Quit() tea.Cmd {
 	return tea.Quit
 }

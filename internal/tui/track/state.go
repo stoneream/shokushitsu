@@ -118,131 +118,131 @@ func newApp(ctx context.Context, store *sqlite.Store, notificationSoundPath stri
 	return app, initialScreen, nil
 }
 
-func (a *appState) loadRecentTasks() error {
-	tasks, err := a.store.ListRecentTasks(a.ctx)
+func (app *appState) loadRecentTasks() error {
+	tasks, err := app.store.ListRecentTasks(app.ctx)
 	if err != nil {
 		return fmt.Errorf("load recent tasks: %w", err)
 	}
-	a.tasks = tasks
-	a.clampTaskCursor()
+	app.tasks = tasks
+	app.clampTaskCursor()
 	return nil
 }
 
-func (a *appState) loadProjects() error {
-	projects, err := a.store.ListProjects(a.ctx)
+func (app *appState) loadProjects() error {
+	projects, err := app.store.ListProjects(app.ctx)
 	if err != nil {
 		return fmt.Errorf("load projects: %w", err)
 	}
-	a.projects = projects
-	a.clampProjectCursor()
+	app.projects = projects
+	app.clampProjectCursor()
 	return nil
 }
 
-func (a *appState) filteredTaskChoices() []taskChoice {
-	query := strings.TrimSpace(strings.ToLower(a.taskSelect.filter.Value()))
+func (app *appState) filteredTaskChoices() []taskChoice {
+	query := strings.TrimSpace(strings.ToLower(app.taskSelect.filter.Value()))
 	choices := []taskChoice{{isNew: true}}
 
-	for _, t := range a.tasks {
+	for _, recentTask := range app.tasks {
 		if query == "" {
-			choices = append(choices, taskChoice{task: t})
+			choices = append(choices, taskChoice{task: recentTask})
 			continue
 		}
 
-		target := strings.ToLower(t.ProjectName + " " + t.TaskName)
-		if strings.Contains(target, query) {
-			choices = append(choices, taskChoice{task: t})
+		searchTarget := strings.ToLower(recentTask.ProjectName + " " + recentTask.TaskName)
+		if strings.Contains(searchTarget, query) {
+			choices = append(choices, taskChoice{task: recentTask})
 		}
 	}
 
 	return choices
 }
 
-func (a *appState) projectChoices() []projectChoice {
+func (app *appState) projectChoices() []projectChoice {
 	choices := []projectChoice{{isNew: true}}
-	for _, p := range a.projects {
-		choices = append(choices, projectChoice{project: p})
+	for _, project := range app.projects {
+		choices = append(choices, projectChoice{project: project})
 	}
 	return choices
 }
 
-func (a *appState) clampTaskCursor() {
-	max := len(a.filteredTaskChoices()) - 1
-	if max < 0 {
-		a.taskSelect.cursor = 0
+func (app *appState) clampTaskCursor() {
+	maxCursor := len(app.filteredTaskChoices()) - 1
+	if maxCursor < 0 {
+		app.taskSelect.cursor = 0
 		return
 	}
-	if a.taskSelect.cursor < 0 {
-		a.taskSelect.cursor = 0
+	if app.taskSelect.cursor < 0 {
+		app.taskSelect.cursor = 0
 	}
-	if a.taskSelect.cursor > max {
-		a.taskSelect.cursor = max
+	if app.taskSelect.cursor > maxCursor {
+		app.taskSelect.cursor = maxCursor
 	}
 }
 
-func (a *appState) clampProjectCursor() {
-	max := len(a.projectChoices()) - 1
-	if max < 0 {
-		a.projectSelect.cursor = 0
+func (app *appState) clampProjectCursor() {
+	maxCursor := len(app.projectChoices()) - 1
+	if maxCursor < 0 {
+		app.projectSelect.cursor = 0
 		return
 	}
-	if a.projectSelect.cursor < 0 {
-		a.projectSelect.cursor = 0
+	if app.projectSelect.cursor < 0 {
+		app.projectSelect.cursor = 0
 	}
-	if a.projectSelect.cursor > max {
-		a.projectSelect.cursor = max
+	if app.projectSelect.cursor > maxCursor {
+		app.projectSelect.cursor = maxCursor
 	}
 }
 
-func (a *appState) startSession(projectID, taskID int64, projectName, taskName string) error {
+func (app *appState) startSession(projectID, taskID int64, projectName, taskName string) error {
 	now := time.Now().UTC()
-	session, err := a.store.StartSession(a.ctx, projectID, taskID, now)
+	session, err := app.store.StartSession(app.ctx, projectID, taskID, now)
 	if err != nil {
 		return fmt.Errorf("start session: %w", err)
 	}
 
-	a.currentSession = &session
-	a.tracking.now = now
-	a.tracking.project = projectName
-	a.tracking.task = taskName
-	a.tracking.lastPromptMin = -1
-	a.tracking.continueCheckActive = false
-	a.tracking.continueCheckDueTime = time.Time{}
-	a.tracking.firstCtrlCAt = time.Time{}
-	a.notice = ""
-	a.doneMessage = ""
+	app.currentSession = &session
+	app.tracking.now = now
+	app.tracking.project = projectName
+	app.tracking.task = taskName
+	app.tracking.lastPromptMin = -1
+	app.tracking.continueCheckActive = false
+	app.tracking.continueCheckDueTime = time.Time{}
+	app.tracking.firstCtrlCAt = time.Time{}
+	app.notice = ""
+	app.doneMessage = ""
 	return nil
 }
 
-func (a *appState) resetTracking() {
-	a.currentSession = nil
-	a.tracking.now = time.Time{}
-	a.tracking.task = ""
-	a.tracking.project = ""
-	a.tracking.lastPromptMin = -1
-	a.tracking.continueCheckActive = false
-	a.tracking.continueCheckDueTime = time.Time{}
-	a.tracking.firstCtrlCAt = time.Time{}
+func (app *appState) resetTracking() {
+	app.currentSession = nil
+	app.tracking.now = time.Time{}
+	app.tracking.task = ""
+	app.tracking.project = ""
+	app.tracking.lastPromptMin = -1
+	app.tracking.continueCheckActive = false
+	app.tracking.continueCheckDueTime = time.Time{}
+	app.tracking.firstCtrlCAt = time.Time{}
 }
 
-func (a *appState) shouldTriggerContinueCheck() bool {
-	if a.currentSession == nil || a.tracking.continueCheckActive {
+func (app *appState) shouldTriggerContinueCheck() bool {
+	if app.currentSession == nil || app.tracking.continueCheckActive {
 		return false
 	}
 
-	elapsedMin := int(a.tracking.now.Sub(a.currentSession.StartedAt).Minutes())
-	if elapsedMin <= 0 {
+	elapsedMinutes := int(app.tracking.now.Sub(app.currentSession.StartedAt).Minutes())
+	if elapsedMinutes <= 0 {
 		return false
 	}
 
-	intervalMin := int(remindInterval / time.Minute)
-	if elapsedMin%intervalMin != 0 {
+	intervalMinutes := int(remindInterval / time.Minute)
+	if elapsedMinutes%intervalMinutes != 0 {
 		return false
 	}
 
-	if elapsedMin == a.tracking.lastPromptMin {
+	if elapsedMinutes == app.tracking.lastPromptMin {
 		return false
 	}
 
-	a.tracking.lastPromptMin = elapsedMin
+	app.tracking.lastPromptMin = elapsedMinutes
 	return true
 }

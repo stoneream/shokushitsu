@@ -29,26 +29,26 @@ sound_file = ""
 
 // Load reads config.toml. If missing, it creates a default config file.
 func Load(path string) (Config, error) {
-	var cfg Config
+	var config Config
 
 	if path == "" {
-		return cfg, fmt.Errorf("config path is required")
+		return config, fmt.Errorf("config path is required")
 	}
 
 	if err := EnsureFile(path); err != nil {
-		return cfg, err
+		return config, err
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return cfg, fmt.Errorf("read config %q: %w", path, err)
+		return config, fmt.Errorf("read config %q: %w", path, err)
 	}
 
-	if err := parseConfigToml(string(data), &cfg); err != nil {
-		return cfg, fmt.Errorf("parse config %q: %w", path, err)
+	if err := parseConfigToml(string(data), &config); err != nil {
+		return config, fmt.Errorf("parse config %q: %w", path, err)
 	}
 
-	return cfg, nil
+	return config, nil
 }
 
 // EnsureFile creates config.toml with default content when it does not exist.
@@ -59,16 +59,16 @@ func EnsureFile(path string) error {
 		return fmt.Errorf("create config directory %q: %w", dir, err)
 	}
 
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		if os.IsExist(err) {
 			return nil
 		}
 		return fmt.Errorf("create config %q: %w", path, err)
 	}
-	defer f.Close()
+	defer file.Close()
 
-	if _, err := f.WriteString(defaultConfigToml); err != nil {
+	if _, err := file.WriteString(defaultConfigToml); err != nil {
 		return fmt.Errorf("write default config %q: %w", path, err)
 	}
 
@@ -76,8 +76,8 @@ func EnsureFile(path string) error {
 }
 
 func (c Config) NotificationSoundPath() string {
-	if v := strings.TrimSpace(c.Notification.SoundFile); v != "" {
-		return v
+	if notificationSoundPath := strings.TrimSpace(c.Notification.SoundFile); notificationSoundPath != "" {
+		return notificationSoundPath
 	}
 
 	return strings.TrimSpace(c.NotificationSoundFile)
@@ -85,28 +85,28 @@ func (c Config) NotificationSoundPath() string {
 
 // ResolveNotificationSoundPath expands ~/ and resolves relative paths against config file directory.
 func ResolveNotificationSoundPath(configPath, rawPath string) string {
-	p := strings.TrimSpace(rawPath)
-	if p == "" {
+	notificationSoundPath := strings.TrimSpace(rawPath)
+	if notificationSoundPath == "" {
 		return ""
 	}
 
-	p = expandHome(p)
-	if filepath.IsAbs(p) {
-		return filepath.Clean(p)
+	notificationSoundPath = expandHome(notificationSoundPath)
+	if filepath.IsAbs(notificationSoundPath) {
+		return filepath.Clean(notificationSoundPath)
 	}
 
-	base := "."
+	baseDir := "."
 	if configPath != "" {
-		base = filepath.Dir(configPath)
+		baseDir = filepath.Dir(configPath)
 	}
 
-	return filepath.Clean(filepath.Join(base, p))
+	return filepath.Clean(filepath.Join(baseDir, notificationSoundPath))
 }
 
-func parseConfigToml(data string, cfg *Config) error {
+func parseConfigToml(data string, config *Config) error {
 	currentTable := ""
 	lines := strings.Split(data, "\n")
-	for i, line := range lines {
+	for lineIndex, line := range lines {
 		content := strings.TrimSpace(stripInlineComment(line))
 		if content == "" {
 			continue
@@ -126,17 +126,17 @@ func parseConfigToml(data string, cfg *Config) error {
 
 		switch {
 		case isNotificationSoundFileKey(currentTable, key):
-			v, err := parseTomlString(value)
+			soundFile, err := parseTomlString(value)
 			if err != nil {
-				return fmt.Errorf("line %d: %w", i+1, err)
+				return fmt.Errorf("line %d: %w", lineIndex+1, err)
 			}
-			cfg.NotificationSoundFile = v
+			config.NotificationSoundFile = soundFile
 		case isNotificationSoundTableKey(currentTable, key):
-			v, err := parseTomlString(value)
+			soundFile, err := parseTomlString(value)
 			if err != nil {
-				return fmt.Errorf("line %d: %w", i+1, err)
+				return fmt.Errorf("line %d: %w", lineIndex+1, err)
 			}
-			cfg.Notification.SoundFile = v
+			config.Notification.SoundFile = soundFile
 		}
 	}
 
@@ -144,17 +144,18 @@ func parseConfigToml(data string, cfg *Config) error {
 }
 
 func isNotificationSoundFileKey(table, key string) bool {
-	t := strings.ToLower(strings.TrimSpace(table))
-	k := strings.ToLower(strings.TrimSpace(key))
+	normalizedTable := strings.ToLower(strings.TrimSpace(table))
+	normalizedKey := strings.ToLower(strings.TrimSpace(key))
 
-	return t == "" && (k == "notification_sound_file" || k == "notification.sound_file")
+	return normalizedTable == "" &&
+		(normalizedKey == "notification_sound_file" || normalizedKey == "notification.sound_file")
 }
 
 func isNotificationSoundTableKey(table, key string) bool {
-	t := strings.ToLower(strings.TrimSpace(table))
-	k := strings.ToLower(strings.TrimSpace(key))
+	normalizedTable := strings.ToLower(strings.TrimSpace(table))
+	normalizedKey := strings.ToLower(strings.TrimSpace(key))
 
-	return t == "notification" && k == "sound_file"
+	return normalizedTable == "notification" && normalizedKey == "sound_file"
 }
 
 func parseTomlString(raw string) (string, error) {
@@ -164,11 +165,11 @@ func parseTomlString(raw string) (string, error) {
 	}
 
 	if strings.HasPrefix(raw, "\"") {
-		v, err := strconv.Unquote(raw)
+		unquotedValue, err := strconv.Unquote(raw)
 		if err != nil {
 			return "", fmt.Errorf("invalid quoted string %q", raw)
 		}
-		return v, nil
+		return unquotedValue, nil
 	}
 
 	if strings.HasPrefix(raw, "'") && strings.HasSuffix(raw, "'") && len(raw) >= 2 {

@@ -16,90 +16,90 @@ func newTaskSelectScreen(app *appState) *taskSelectScreen {
 	return &taskSelectScreen{app: app}
 }
 
-func (s *taskSelectScreen) Init(lib.Navigator) tea.Cmd {
-	s.app.taskSelect.filter.Focus()
+func (screen *taskSelectScreen) Init(lib.Navigator) tea.Cmd {
+	screen.app.taskSelect.filter.Focus()
 	return nil
 }
 
-func (s *taskSelectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch v := msg.(type) {
+func (screen *taskSelectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
+	switch keyMsg := msg.(type) {
 	case tea.KeyMsg:
-		switch v.String() {
+		switch keyMsg.String() {
 		case "ctrl+c":
 			return nav.Quit()
 		case "esc":
-			s.app.notice = ""
-			s.app.result = Result{Action: ActionReturnHome}
+			screen.app.notice = ""
+			screen.app.result = Result{Action: ActionReturnHome}
 			return nav.Quit()
 		case "up", "k":
-			s.app.taskSelect.cursor--
-			s.app.clampTaskCursor()
+			screen.app.taskSelect.cursor--
+			screen.app.clampTaskCursor()
 			return nil
 		case "down", "j":
-			s.app.taskSelect.cursor++
-			s.app.clampTaskCursor()
+			screen.app.taskSelect.cursor++
+			screen.app.clampTaskCursor()
 			return nil
 		case "enter":
-			choices := s.app.filteredTaskChoices()
+			choices := screen.app.filteredTaskChoices()
 			if len(choices) == 0 {
 				return nil
 			}
 
-			choice := choices[s.app.taskSelect.cursor]
+			choice := choices[screen.app.taskSelect.cursor]
 			if choice.isNew {
-				if err := s.app.loadProjects(); err != nil {
-					s.app.runErr = err
+				if err := screen.app.loadProjects(); err != nil {
+					screen.app.runErr = err
 					return nav.Quit()
 				}
-				s.app.projectSelect.cursor = 0
-				s.app.notice = ""
-				return nav.Replace(newProjectSelectScreen(s.app))
+				screen.app.projectSelect.cursor = 0
+				screen.app.notice = ""
+				return nav.Replace(newProjectSelectScreen(screen.app))
 			}
 
-			if err := s.app.startSession(choice.task.ProjectID, choice.task.TaskID, choice.task.ProjectName, choice.task.TaskName); err != nil {
-				s.app.runErr = err
+			if err := screen.app.startSession(choice.task.ProjectID, choice.task.TaskID, choice.task.ProjectName, choice.task.TaskName); err != nil {
+				screen.app.runErr = err
 				return nav.Quit()
 			}
-			return nav.Replace(newTrackingScreen(s.app))
+			return nav.Replace(newTrackingScreen(screen.app))
 		}
 	}
 
 	var cmd tea.Cmd
-	s.app.taskSelect.filter, cmd = s.app.taskSelect.filter.Update(msg)
-	s.app.clampTaskCursor()
+	screen.app.taskSelect.filter, cmd = screen.app.taskSelect.filter.Update(msg)
+	screen.app.clampTaskCursor()
 	return cmd
 }
 
-func (s *taskSelectScreen) View() string {
-	var b strings.Builder
-	b.WriteString(styleTitle.Render("タスク選択"))
-	b.WriteString("\n\n")
-	b.WriteString(s.app.taskSelect.filter.View())
-	b.WriteString("\n\n")
+func (screen *taskSelectScreen) View() string {
+	var builder strings.Builder
+	builder.WriteString(styleTitle.Render("タスク選択"))
+	builder.WriteString("\n\n")
+	builder.WriteString(screen.app.taskSelect.filter.View())
+	builder.WriteString("\n\n")
 
-	for i, c := range s.app.filteredTaskChoices() {
+	for index, choice := range screen.app.filteredTaskChoices() {
 		cursor := "  "
-		if i == s.app.taskSelect.cursor {
+		if index == screen.app.taskSelect.cursor {
 			cursor = styleCursor.Render("> ")
 		}
 
-		if c.isNew {
-			b.WriteString(cursor + styleNewAction.Render("[+] 新規タスクを作成") + "\n")
+		if choice.isNew {
+			builder.WriteString(cursor + styleNewAction.Render("[+] 新規タスクを作成") + "\n")
 			continue
 		}
 
-		b.WriteString(fmt.Sprintf(
+		builder.WriteString(fmt.Sprintf(
 			"%s[%s] %s",
 			cursor,
-			styleProjectName.Render(c.task.ProjectName),
-			styleTaskName.Render(c.task.TaskName),
+			styleProjectName.Render(choice.task.ProjectName),
+			styleTaskName.Render(choice.task.TaskName),
 		) + "\n")
 	}
 
-	if s.app.notice != "" {
-		b.WriteString("\n" + styleNotice.Render(s.app.notice) + "\n")
+	if screen.app.notice != "" {
+		builder.WriteString("\n" + styleNotice.Render(screen.app.notice) + "\n")
 	}
 
-	b.WriteString("\nEnter: 決定  ↑/↓: 移動  Esc: 戻る  Ctrl+C: 終了")
-	return b.String()
+	builder.WriteString("\nEnter: 決定  ↑/↓: 移動  Esc: 戻る  Ctrl+C: 終了")
+	return builder.String()
 }

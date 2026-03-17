@@ -73,34 +73,34 @@ func newMenuScreen(app *appState) *menuScreen {
 	return &menuScreen{app: app}
 }
 
-func (s *menuScreen) Init(lib.Navigator) tea.Cmd {
+func (screen *menuScreen) Init(lib.Navigator) tea.Cmd {
 	return nil
 }
 
-func (s *menuScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch v := msg.(type) {
+func (screen *menuScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
+	switch keyMsg := msg.(type) {
 	case tea.KeyMsg:
-		switch v.String() {
+		switch keyMsg.String() {
 		case "up", "k":
-			s.app.menuCursor--
-			if s.app.menuCursor < 0 {
-				s.app.menuCursor = 0
+			screen.app.menuCursor--
+			if screen.app.menuCursor < 0 {
+				screen.app.menuCursor = 0
 			}
 		case "down", "j":
-			s.app.menuCursor++
-			if s.app.menuCursor >= len(s.app.choices) {
-				s.app.menuCursor = len(s.app.choices) - 1
+			screen.app.menuCursor++
+			if screen.app.menuCursor >= len(screen.app.choices) {
+				screen.app.menuCursor = len(screen.app.choices) - 1
 			}
 		case "enter":
-			action := s.app.choices[s.app.menuCursor].action
+			action := screen.app.choices[screen.app.menuCursor].action
 			if action == ActionSummary {
-				return nav.Replace(newSummaryDateScreen(s.app))
+				return nav.Replace(newSummaryDateScreen(screen.app))
 			}
 
-			s.app.result = Result{Action: action}
+			screen.app.result = Result{Action: action}
 			return nav.Quit()
 		case "ctrl+c":
-			s.app.result = Result{Action: ActionQuit}
+			screen.app.result = Result{Action: ActionQuit}
 			return nav.Quit()
 		}
 	}
@@ -108,35 +108,35 @@ func (s *menuScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 	return nil
 }
 
-func (s *menuScreen) View() string {
-	var b strings.Builder
-	b.WriteString(styleTitle.Render("shoku"))
-	b.WriteString("\n")
-	b.WriteString(stylePromptText.Render("実行するコマンドを選択してください"))
-	b.WriteString("\n\n")
+func (screen *menuScreen) View() string {
+	var builder strings.Builder
+	builder.WriteString(styleTitle.Render("shoku"))
+	builder.WriteString("\n")
+	builder.WriteString(stylePromptText.Render("実行するコマンドを選択してください"))
+	builder.WriteString("\n\n")
 
-	for i, c := range s.app.choices {
+	for index, choice := range screen.app.choices {
 		cursor := "  "
-		if i == s.app.menuCursor {
+		if index == screen.app.menuCursor {
 			cursor = styleCursor.Render("> ")
 		}
 
-		label := c.label
-		switch c.action {
+		label := choice.label
+		switch choice.action {
 		case ActionTrack:
-			label = styleTrack.Render(c.label)
+			label = styleTrack.Render(choice.label)
 		case ActionSummary:
-			label = styleSummary.Render(c.label)
+			label = styleSummary.Render(choice.label)
 		case ActionQuit:
-			label = styleQuit.Render(c.label)
+			label = styleQuit.Render(choice.label)
 		}
 
-		line := fmt.Sprintf("%s%s  (%s)", cursor, label, styleGuide.Render(c.description))
-		b.WriteString(line + "\n")
+		line := fmt.Sprintf("%s%s  (%s)", cursor, label, styleGuide.Render(choice.description))
+		builder.WriteString(line + "\n")
 	}
 
-	b.WriteString("\n" + styleGuide.Render("Enter: 決定  ↑/↓: 移動  Ctrl+C: 終了"))
-	return b.String()
+	builder.WriteString("\n" + styleGuide.Render("Enter: 決定  ↑/↓: 移動  Ctrl+C: 終了"))
+	return builder.String()
 }
 
 type summaryDateScreen struct {
@@ -149,42 +149,42 @@ func newSummaryDateScreen(app *appState) *summaryDateScreen {
 	return &summaryDateScreen{app: app}
 }
 
-func (s *summaryDateScreen) Init(lib.Navigator) tea.Cmd {
+func (screen *summaryDateScreen) Init(lib.Navigator) tea.Cmd {
 	return nil
 }
 
-func (s *summaryDateScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch v := msg.(type) {
+func (screen *summaryDateScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
+	switch keyMsg := msg.(type) {
 	case tea.KeyMsg:
-		switch v.String() {
+		switch keyMsg.String() {
 		case "up", "k":
-			s.cursor--
-			if s.cursor < 0 {
-				s.cursor = 0
+			screen.cursor--
+			if screen.cursor < 0 {
+				screen.cursor = 0
 			}
 		case "down", "j":
-			s.cursor++
-			if s.cursor >= len(s.app.summaryDates) {
-				s.cursor = len(s.app.summaryDates) - 1
+			screen.cursor++
+			if screen.cursor >= len(screen.app.summaryDates) {
+				screen.cursor = len(screen.app.summaryDates) - 1
 			}
-			if s.cursor < 0 {
-				s.cursor = 0
+			if screen.cursor < 0 {
+				screen.cursor = 0
 			}
 		case "enter":
-			if len(s.app.summaryDates) == 0 {
-				s.notice = "選択可能な日付がありません"
+			if len(screen.app.summaryDates) == 0 {
+				screen.notice = "選択可能な日付がありません"
 				return nil
 			}
 
-			s.app.result = Result{
+			screen.app.result = Result{
 				Action:      ActionSummary,
-				SummaryDate: s.app.summaryDates[s.cursor],
+				SummaryDate: screen.app.summaryDates[screen.cursor],
 			}
 			return nav.Quit()
 		case "esc":
-			return nav.Replace(newMenuScreen(s.app))
+			return nav.Replace(newMenuScreen(screen.app))
 		case "ctrl+c":
-			s.app.result = Result{Action: ActionQuit}
+			screen.app.result = Result{Action: ActionQuit}
 			return nav.Quit()
 		}
 	}
@@ -192,34 +192,34 @@ func (s *summaryDateScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 	return nil
 }
 
-func (s *summaryDateScreen) View() string {
-	var b strings.Builder
-	b.WriteString(styleTitle.Render("summary"))
-	b.WriteString("\n")
-	b.WriteString(stylePromptText.Render("集計日を選択してください（新しい順）"))
-	b.WriteString("\n\n")
+func (screen *summaryDateScreen) View() string {
+	var builder strings.Builder
+	builder.WriteString(styleTitle.Render("summary"))
+	builder.WriteString("\n")
+	builder.WriteString(stylePromptText.Render("集計日を選択してください（新しい順）"))
+	builder.WriteString("\n\n")
 
-	if len(s.app.summaryDates) == 0 {
-		b.WriteString(styleError.Render("サマリー対象の日付がありません"))
+	if len(screen.app.summaryDates) == 0 {
+		builder.WriteString(styleError.Render("サマリー対象の日付がありません"))
 	} else {
-		for i, d := range s.app.summaryDates {
+		for index, summaryDate := range screen.app.summaryDates {
 			cursor := "  "
-			if i == s.cursor {
+			if index == screen.cursor {
 				cursor = styleCursor.Render("> ")
 			}
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, styleSummary.Render(d)))
+			builder.WriteString(fmt.Sprintf("%s%s\n", cursor, styleSummary.Render(summaryDate)))
 		}
 	}
 
-	if s.notice != "" {
-		b.WriteString("\n")
-		b.WriteString(styleError.Render(s.notice))
+	if screen.notice != "" {
+		builder.WriteString("\n")
+		builder.WriteString(styleError.Render(screen.notice))
 	}
 
-	if len(s.app.summaryDates) == 0 {
-		b.WriteString("\n\n" + styleGuide.Render("Esc: 戻る  Ctrl+C: 終了"))
+	if len(screen.app.summaryDates) == 0 {
+		builder.WriteString("\n\n" + styleGuide.Render("Esc: 戻る  Ctrl+C: 終了"))
 	} else {
-		b.WriteString("\n" + styleGuide.Render("Enter: 実行  Esc: 戻る  ↑/↓: 移動  Ctrl+C: 終了"))
+		builder.WriteString("\n" + styleGuide.Render("Enter: 実行  Esc: 戻る  ↑/↓: 移動  Ctrl+C: 終了"))
 	}
-	return b.String()
+	return builder.String()
 }

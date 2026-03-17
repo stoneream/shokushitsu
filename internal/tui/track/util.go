@@ -13,25 +13,25 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func formatDuration(d time.Duration) string {
-	if d < 0 {
-		d = 0
+func formatDuration(duration time.Duration) string {
+	if duration < 0 {
+		duration = 0
 	}
 
-	total := int64(d.Seconds())
-	h := total / 3600
-	m := (total % 3600) / 60
-	s := total % 60
-	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+	totalSeconds := int64(duration.Seconds())
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }
 
-func formatMMSS(d time.Duration) string {
-	total := int64(d.Seconds())
-	if total < 0 {
-		total = 0
+func formatMMSS(duration time.Duration) string {
+	totalSeconds := int64(duration.Seconds())
+	if totalSeconds < 0 {
+		totalSeconds = 0
 	}
 
-	m := total / 60
-	s := total % 60
-	return fmt.Sprintf("%02d:%02d", m, s)
+	minutes := totalSeconds / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%02d:%02d", minutes, seconds)
 }

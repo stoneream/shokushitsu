@@ -15,58 +15,58 @@ func newNewProjectScreen(app *appState) *newProjectScreen {
 	return &newProjectScreen{app: app}
 }
 
-func (s *newProjectScreen) Init(lib.Navigator) tea.Cmd {
-	s.app.newProject.input.Focus()
+func (screen *newProjectScreen) Init(lib.Navigator) tea.Cmd {
+	screen.app.newProject.input.Focus()
 	return nil
 }
 
-func (s *newProjectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch v := msg.(type) {
+func (screen *newProjectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
+	switch keyMsg := msg.(type) {
 	case tea.KeyMsg:
-		switch v.String() {
+		switch keyMsg.String() {
 		case "ctrl+c":
 			return nav.Quit()
 		case "esc":
-			s.app.notice = ""
-			return nav.Replace(newProjectSelectScreen(s.app))
+			screen.app.notice = ""
+			return nav.Replace(newProjectSelectScreen(screen.app))
 		case "enter":
-			name := strings.TrimSpace(s.app.newProject.input.Value())
+			name := strings.TrimSpace(screen.app.newProject.input.Value())
 			if name == "" {
-				s.app.notice = "プロジェクト名を入力してください。"
+				screen.app.notice = "プロジェクト名を入力してください。"
 				return nil
 			}
 
-			project, err := s.app.store.GetOrCreateProject(s.app.ctx, name)
+			project, err := screen.app.store.GetOrCreateProject(screen.app.ctx, name)
 			if err != nil {
-				s.app.notice = "プロジェクト作成に失敗しました。"
+				screen.app.notice = "プロジェクト作成に失敗しました。"
 				return nil
 			}
 
-			s.app.selectedProject = &project
-			if err := s.app.loadProjects(); err != nil {
-				s.app.runErr = err
+			screen.app.selectedProject = &project
+			if err := screen.app.loadProjects(); err != nil {
+				screen.app.runErr = err
 				return nav.Quit()
 			}
-			s.app.newTask.input.SetValue("")
-			s.app.newTask.input.Focus()
-			s.app.notice = ""
-			return nav.Replace(newNewTaskScreen(s.app))
+			screen.app.newTask.input.SetValue("")
+			screen.app.newTask.input.Focus()
+			screen.app.notice = ""
+			return nav.Replace(newNewTaskScreen(screen.app))
 		}
 	}
 
 	var cmd tea.Cmd
-	s.app.newProject.input, cmd = s.app.newProject.input.Update(msg)
+	screen.app.newProject.input, cmd = screen.app.newProject.input.Update(msg)
 	return cmd
 }
 
-func (s *newProjectScreen) View() string {
-	var b strings.Builder
-	b.WriteString(styleNewAction.Render("新規プロジェクト作成"))
-	b.WriteString("\n\n")
-	b.WriteString(s.app.newProject.input.View())
-	if s.app.notice != "" {
-		b.WriteString("\n\n" + styleNotice.Render(s.app.notice))
+func (screen *newProjectScreen) View() string {
+	var builder strings.Builder
+	builder.WriteString(styleNewAction.Render("新規プロジェクト作成"))
+	builder.WriteString("\n\n")
+	builder.WriteString(screen.app.newProject.input.View())
+	if screen.app.notice != "" {
+		builder.WriteString("\n\n" + styleNotice.Render(screen.app.notice))
 	}
-	b.WriteString("\n\nEnter: 作成  Esc: 戻る  Ctrl+C: 終了")
-	return b.String()
+	builder.WriteString("\n\nEnter: 作成  Esc: 戻る  Ctrl+C: 終了")
+	return builder.String()
 }

@@ -60,10 +60,10 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 }
 
 func isMigrationApplied(ctx context.Context, db *sql.DB, version string) (bool, error) {
-	const q = `SELECT 1 FROM schema_migrations WHERE version = ? LIMIT 1`
+	const query = `SELECT 1 FROM schema_migrations WHERE version = ? LIMIT 1`
 
 	var value int
-	if err := db.QueryRowContext(ctx, q, version).Scan(&value); err != nil {
+	if err := db.QueryRowContext(ctx, query, version).Scan(&value); err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
@@ -87,8 +87,8 @@ func applyMigration(ctx context.Context, db *sql.DB, version, body string) error
 		return fmt.Errorf("exec migration %s: %w", version, err)
 	}
 
-	const q = `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`
-	if _, err := tx.ExecContext(ctx, q, version, time.Now().UTC().Unix()); err != nil {
+	const insertMigrationQuery = `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`
+	if _, err := tx.ExecContext(ctx, insertMigrationQuery, version, time.Now().UTC().Unix()); err != nil {
 		return fmt.Errorf("record migration %s: %w", version, err)
 	}
 

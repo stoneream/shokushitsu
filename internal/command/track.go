@@ -17,42 +17,46 @@ func newTrackCmd() *cobra.Command {
 		Short: "作業時間の計測を開始・終了します",
 		Long:  "作業セッションの開始、継続、終了を管理します。",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configPath, err := appenv.ConfigPath()
+			result, err := runTrack(cmd.Context())
 			if err != nil {
 				return err
 			}
-
-			cfg, err := config.Load(configPath)
-			if err != nil {
-				return err
-			}
-			notificationSoundPath := config.ResolveNotificationSoundPath(
-				configPath,
-				cfg.NotificationSoundPath(),
-			)
-
-			dbPath, err := appenv.DBPath()
-			if err != nil {
-				return err
-			}
-
-			store, err := sqlite.Open(dbPath)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				_ = store.Close()
-			}()
-
-			message, err := tracktui.Run(context.Background(), store, notificationSoundPath)
-			if err != nil {
-				return err
-			}
-			if message != "" {
-				fmt.Fprintln(cmd.OutOrStdout(), message)
+			if result.Message != "" {
+				fmt.Fprintln(cmd.OutOrStdout(), result.Message)
 			}
 
 			return nil
 		},
 	}
+}
+
+func runTrack(ctx context.Context) (tracktui.Result, error) {
+	configPath, err := appenv.ConfigPath()
+	if err != nil {
+		return tracktui.Result{}, err
+	}
+
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		return tracktui.Result{}, err
+	}
+	notificationSoundPath := config.ResolveNotificationSoundPath(
+		configPath,
+		cfg.NotificationSoundPath(),
+	)
+
+	dbPath, err := appenv.DBPath()
+	if err != nil {
+		return tracktui.Result{}, err
+	}
+
+	store, err := sqlite.Open(dbPath)
+	if err != nil {
+		return tracktui.Result{}, err
+	}
+	defer func() {
+		_ = store.Close()
+	}()
+
+	return tracktui.Run(ctx, store, notificationSoundPath)
 }

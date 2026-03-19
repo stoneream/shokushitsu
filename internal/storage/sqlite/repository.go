@@ -90,7 +90,7 @@ func (s *Store) StartSession(ctx context.Context, projectID, taskID int64, start
 	startedAt = startedAt.UTC()
 	now := time.Now().UTC()
 
-	const q = `
+	const insertSessionQuery = `
 INSERT INTO sessions(project_id, task_id, started_at, created_at, updated_at)
 VALUES(?, ?, ?, ?, ?)
 RETURNING id, project_id, task_id, started_at, ended_at, created_at, updated_at;
@@ -99,7 +99,7 @@ RETURNING id, project_id, task_id, started_at, ended_at, created_at, updated_at;
 	var row Session
 	var startedAtUnix, createdAtUnix, updatedAtUnix int64
 	var endedAt sql.NullInt64
-	if err := s.db.QueryRowContext(ctx, q, projectID, taskID, startedAt.Unix(), now.Unix(), now.Unix()).Scan(
+	if err := s.db.QueryRowContext(ctx, insertSessionQuery, projectID, taskID, startedAt.Unix(), now.Unix(), now.Unix()).Scan(
 		&row.ID,
 		&row.ProjectID,
 		&row.TaskID,
@@ -122,22 +122,22 @@ func (s *Store) EndSession(ctx context.Context, sessionID int64, endedAt time.Ti
 	endedAt = endedAt.UTC()
 	now := time.Now().UTC()
 
-	const q = `
+	const endSessionQuery = `
 UPDATE sessions
 SET ended_at = ?, updated_at = ?
 WHERE id = ? AND ended_at IS NULL;
 `
 
-	res, err := s.db.ExecContext(ctx, q, endedAt.Unix(), now.Unix(), sessionID)
+	result, err := s.db.ExecContext(ctx, endSessionQuery, endedAt.Unix(), now.Unix(), sessionID)
 	if err != nil {
 		return fmt.Errorf("end session %d: %w", sessionID, err)
 	}
 
-	n, err := res.RowsAffected()
+	affectedRows, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("rows affected for end session %d: %w", sessionID, err)
 	}
-	if n > 0 {
+	if affectedRows > 0 {
 		return nil
 	}
 
@@ -159,14 +159,14 @@ WHERE id = ? AND ended_at IS NULL;
 }
 
 func (s *Store) GetActiveSessions(ctx context.Context) ([]Session, error) {
-	const q = `
+	const activeSessionsQuery = `
 SELECT id, project_id, task_id, started_at, ended_at, created_at, updated_at
 FROM sessions
 WHERE ended_at IS NULL
 ORDER BY started_at ASC, id ASC;
 `
 
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := s.db.QueryContext(ctx, activeSessionsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("query active sessions: %w", err)
 	}
@@ -189,14 +189,14 @@ ORDER BY started_at ASC, id ASC;
 }
 
 func (s *Store) ListSessionsByRange(ctx context.Context, from, to time.Time) ([]Session, error) {
-	const q = `
+	const sessionsByRangeQuery = `
 SELECT id, project_id, task_id, started_at, ended_at, created_at, updated_at
 FROM sessions
 WHERE started_at >= ? AND started_at < ?
 ORDER BY started_at ASC, id ASC;
 `
 
-	rows, err := s.db.QueryContext(ctx, q, from.UTC().Unix(), to.UTC().Unix())
+	rows, err := s.db.QueryContext(ctx, sessionsByRangeQuery, from.UTC().Unix(), to.UTC().Unix())
 	if err != nil {
 		return nil, fmt.Errorf("query sessions by range: %w", err)
 	}
@@ -219,14 +219,14 @@ ORDER BY started_at ASC, id ASC;
 }
 
 func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
-	const q = `
+	const listProjectsQuery = `
 SELECT id, name, created_at, updated_at, archived_at
 FROM projects
 WHERE archived_at IS NULL
 ORDER BY name ASC;
 `
 
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := s.db.QueryContext(ctx, listProjectsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("query projects: %w", err)
 	}
@@ -261,7 +261,7 @@ ORDER BY name ASC;
 }
 
 func (s *Store) ListRecentTasks(ctx context.Context) ([]RecentTask, error) {
-	const q = `
+	const recentTasksQuery = `
 SELECT
 	t.id,
 	t.project_id,
@@ -289,7 +289,7 @@ ORDER BY
 	t.name ASC;
 `
 
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := s.db.QueryContext(ctx, recentTasksQuery)
 	if err != nil {
 		return nil, fmt.Errorf("query recent tasks: %w", err)
 	}
@@ -322,7 +322,7 @@ ORDER BY
 }
 
 func (s *Store) ListDailySummaryItemsByStartedRange(ctx context.Context, from, to time.Time) ([]DailySummaryItem, error) {
-	const q = `
+	const dailySummaryQuery = `
 SELECT
 	p.name,
 	t.name,
@@ -344,7 +344,7 @@ ORDER BY
 	t.name ASC;
 `
 
-	rows, err := s.db.QueryContext(ctx, q, from.UTC().Unix(), to.UTC().Unix())
+	rows, err := s.db.QueryContext(ctx, dailySummaryQuery, from.UTC().Unix(), to.UTC().Unix())
 	if err != nil {
 		return nil, fmt.Errorf("query daily summary items: %w", err)
 	}
@@ -376,13 +376,13 @@ func (s *Store) ListSessionStartedDates(ctx context.Context, loc *time.Location)
 		loc = time.Local
 	}
 
-	const q = `
+	const sessionStartedDatesQuery = `
 SELECT started_at
 FROM sessions
 ORDER BY started_at DESC, id DESC;
 `
 
-	rows, err := s.db.QueryContext(ctx, q)
+	rows, err := s.db.QueryContext(ctx, sessionStartedDatesQuery)
 	if err != nil {
 		return nil, fmt.Errorf("query session started dates: %w", err)
 	}
@@ -416,7 +416,7 @@ ORDER BY started_at DESC, id DESC;
 }
 
 func (s *Store) CountUnfinishedSessionsByStartedRange(ctx context.Context, from, to time.Time) (int64, error) {
-	const q = `
+	const unfinishedSessionsQuery = `
 SELECT COUNT(1)
 FROM sessions
 WHERE started_at >= ?
@@ -425,7 +425,7 @@ WHERE started_at >= ?
 `
 
 	var count int64
-	if err := s.db.QueryRowContext(ctx, q, from.UTC().Unix(), to.UTC().Unix()).Scan(&count); err != nil {
+	if err := s.db.QueryRowContext(ctx, unfinishedSessionsQuery, from.UTC().Unix(), to.UTC().Unix()).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count unfinished sessions by range: %w", err)
 	}
 
@@ -457,7 +457,7 @@ func scanSession(rows *sql.Rows) (Session, error) {
 }
 
 func (s *Store) getProjectByName(ctx context.Context, name string) (Project, error) {
-	const q = `
+	const projectByNameQuery = `
 SELECT id, name, created_at, updated_at, archived_at
 FROM projects
 WHERE name = ?;
@@ -466,7 +466,7 @@ WHERE name = ?;
 	var row Project
 	var createdAt, updatedAt int64
 	var archivedAt sql.NullInt64
-	if err := s.db.QueryRowContext(ctx, q, name).Scan(
+	if err := s.db.QueryRowContext(ctx, projectByNameQuery, name).Scan(
 		&row.ID,
 		&row.Name,
 		&createdAt,
@@ -483,7 +483,7 @@ WHERE name = ?;
 }
 
 func (s *Store) getTaskByProjectAndName(ctx context.Context, projectID int64, name string) (Task, error) {
-	const q = `
+	const taskByProjectAndNameQuery = `
 SELECT id, project_id, name, created_at, updated_at, archived_at
 FROM tasks
 WHERE project_id = ? AND name = ?;
@@ -492,7 +492,7 @@ WHERE project_id = ? AND name = ?;
 	var row Task
 	var createdAt, updatedAt int64
 	var archivedAt sql.NullInt64
-	if err := s.db.QueryRowContext(ctx, q, projectID, name).Scan(
+	if err := s.db.QueryRowContext(ctx, taskByProjectAndNameQuery, projectID, name).Scan(
 		&row.ID,
 		&row.ProjectID,
 		&row.Name,
@@ -509,15 +509,15 @@ WHERE project_id = ? AND name = ?;
 	return row, nil
 }
 
-func fromUnix(v int64) time.Time {
-	return time.Unix(v, 0).UTC()
+func fromUnix(unixSeconds int64) time.Time {
+	return time.Unix(unixSeconds, 0).UTC()
 }
 
-func nullableTime(v sql.NullInt64) *time.Time {
-	if !v.Valid {
+func nullableTime(nullableUnixSeconds sql.NullInt64) *time.Time {
+	if !nullableUnixSeconds.Valid {
 		return nil
 	}
 
-	t := fromUnix(v.Int64)
-	return &t
+	timestamp := fromUnix(nullableUnixSeconds.Int64)
+	return &timestamp
 }

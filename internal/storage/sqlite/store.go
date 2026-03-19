@@ -50,12 +50,12 @@ func Open(path string) (*Store, error) {
 	return &Store{db: db}, nil
 }
 
-func (s *Store) Close() error {
-	if s == nil || s.db == nil {
+func (store *Store) Close() error {
+	if store == nil || store.db == nil {
 		return nil
 	}
 
-	return s.db.Close()
+	return store.db.Close()
 }
 
 func applyPragmas(ctx context.Context, db *sql.DB) error {

@@ -15,7 +15,7 @@ const summaryDateLayout = "2006-01-02"
 func newSummaryCmd() *cobra.Command {
 	var dateArg string
 
-	cmd := &cobra.Command{
+	summaryCmd := &cobra.Command{
 		Use:   "summary",
 		Short: "作業時間のサマリーを表示します",
 		Long:  "指定した期間の作業ログを集計し、結果を表示します。",
@@ -97,8 +97,8 @@ func newSummaryCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&dateArg, "date", "", "集計対象日 (YYYY-MM-DD)。未指定時は当日")
-	return cmd
+	summaryCmd.Flags().StringVar(&dateArg, "date", "", "集計対象日 (YYYY-MM-DD)。未指定時は当日")
+	return summaryCmd
 }
 
 func resolveSummaryDate(raw string) (time.Time, error) {
@@ -107,12 +107,12 @@ func resolveSummaryDate(raw string) (time.Time, error) {
 		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local), nil
 	}
 
-	d, err := time.ParseInLocation(summaryDateLayout, raw, time.Local)
+	parsedDate, err := time.ParseInLocation(summaryDateLayout, raw, time.Local)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("--date は YYYY-MM-DD 形式で指定してください: %q", raw)
 	}
 
-	return d, nil
+	return parsedDate, nil
 }
 
 func formatHHMMSS(totalSeconds int64) string {

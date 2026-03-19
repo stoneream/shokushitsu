@@ -10,6 +10,7 @@ import (
 	"github.com/stoneream/shokushitsu/internal/config"
 	"github.com/stoneream/shokushitsu/internal/storage/sqlite"
 	hometui "github.com/stoneream/shokushitsu/internal/tui/home"
+	tracktui "github.com/stoneream/shokushitsu/internal/tui/track"
 )
 
 const japaneseHelpTemplate = `{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
@@ -48,7 +49,7 @@ func newRootCmd() *cobra.Command {
 	summaryCmd := newSummaryCmd()
 	versionCmd := newVersionCmd()
 
-	cmd := &cobra.Command{
+	rootCmd := &cobra.Command{
 		Use:           "shoku",
 		Long:          "shokushitsu は作業時間の記録と集計を行うためのCLIツールです。",
 		SilenceUsage:  true,
@@ -65,65 +66,77 @@ func newRootCmd() *cobra.Command {
 			DisableDefaultCmd: true,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			summaryDates, err := loadSummaryDates(context.Background())
-			if err != nil {
-				return err
-			}
-
-			result, err := hometui.Run(summaryDates)
-			if err != nil {
-				return err
-			}
-
-			switch result.Action {
-			case hometui.ActionTrack:
-				return executeCommand(trackCmd)
-			case hometui.ActionSummary:
-				if err := summaryCmd.Flags().Set("date", result.SummaryDate); err != nil {
+			for {
+				summaryDates, err := loadSummaryDates(context.Background())
+				if err != nil {
 					return err
 				}
-				return executeCommand(summaryCmd)
-			case hometui.ActionQuit:
-				return nil
-			default:
-				return fmt.Errorf("unknown action: %s", result.Action)
+
+				result, err := hometui.Run(summaryDates)
+				if err != nil {
+					return err
+				}
+
+				switch result.Action {
+				case hometui.ActionTrack:
+					trackResult, err := runTrack(cmd.Context())
+					if err != nil {
+						return err
+					}
+					if trackResult.Message != "" {
+						fmt.Fprintln(cmd.OutOrStdout(), trackResult.Message)
+					}
+					if trackResult.Action == tracktui.ActionReturnHome {
+						continue
+					}
+					return nil
+				case hometui.ActionSummary:
+					if err := summaryCmd.Flags().Set("date", result.SummaryDate); err != nil {
+						return err
+					}
+					return executeCommand(summaryCmd)
+				case hometui.ActionQuit:
+					return nil
+				default:
+					return fmt.Errorf("unknown action: %s", result.Action)
+				}
 			}
 		},
 	}
-	cmd.SetHelpTemplate(japaneseHelpTemplate)
-	cmd.SetUsageTemplate(japaneseHelpTemplate)
-	cmd.PersistentFlags().BoolP("help", "h", false, "ヘルプを表示します")
+	rootCmd.SetHelpTemplate(japaneseHelpTemplate)
+	rootCmd.SetUsageTemplate(japaneseHelpTemplate)
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "ヘルプを表示します")
 
-	cmd.SetHelpCommand(&cobra.Command{
+	rootCmd.SetHelpCommand(&cobra.Command{
 		Use:   "help [コマンド名]",
 		Short: "コマンドのヘルプを表示します",
 		Long:  "指定したコマンドの詳細なヘルプを表示します。",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(helpCmd *cobra.Command, args []string) {
-			cmd.HelpFunc()(cmd, args)
+			rootCmd.HelpFunc()(rootCmd, args)
 		},
 	})
 
-	cmd.AddCommand(
+	rootCmd.AddCommand(
 		trackCmd,
 		summaryCmd,
 		versionCmd,
 	)
 
-	return cmd
+	return rootCmd
 }
 
-func executeCommand(c *cobra.Command) error {
-	if c.RunE != nil {
-		return c.RunE(c, nil)
+func executeCommand(command *cobra.Command) error {
+	if command.RunE != nil {
+		return command.RunE(command, nil)
 	}
 
-	if c.Run != nil {
-		c.Run(c, nil)
+	if command.Run != nil {
+		command.Run(command, nil)
 		return nil
 	}
 
-	return fmt.Errorf("command %q has no runnable handler", c.Name())
+	return fmt.Errorf("command %q has no runnable handler", command.Name())
 }
 
 func loadSummaryDates(ctx context.Context) ([]string, error) {
@@ -146,8 +159,8 @@ func loadSummaryDates(ctx context.Context) ([]string, error) {
 	}
 
 	formatted := make([]string, 0, len(dates))
-	for _, d := range dates {
-		formatted = append(formatted, d.Format(summaryDateLayout))
+	for _, sessionDate := range dates {
+		formatted = append(formatted, sessionDate.Format(summaryDateLayout))
 	}
 
 	return formatted, nil

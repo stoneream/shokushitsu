@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
+
+	toml "github.com/pelletier/go-toml/v2"
 )
 
 type Config struct {
@@ -44,7 +45,7 @@ func Load(path string) (Config, error) {
 		return config, fmt.Errorf("read config %q: %w", path, err)
 	}
 
-	if err := parseConfigToml(string(data), &config); err != nil {
+	if err := toml.Unmarshal(data, &config); err != nil {
 		return config, fmt.Errorf("parse config %q: %w", path, err)
 	}
 
@@ -100,118 +101,6 @@ func ResolveNotificationSoundPath(configPath, rawPath string) string {
 	}
 
 	return filepath.Clean(filepath.Join(filepath.Dir(configPath), notificationSoundPath))
-}
-
-func parseConfigToml(data string, config *Config) error {
-	currentTable := ""
-	lines := strings.Split(data, "\n")
-	for lineIndex, line := range lines {
-		content := strings.TrimSpace(stripInlineComment(line))
-		if content == "" {
-			continue
-		}
-
-		if strings.HasPrefix(content, "[") && strings.HasSuffix(content, "]") {
-			currentTable = strings.TrimSpace(content[1 : len(content)-1])
-			continue
-		}
-
-		key, value, ok := strings.Cut(content, "=")
-		if !ok {
-			continue
-		}
-		key = strings.TrimSpace(key)
-		value = strings.TrimSpace(value)
-
-		switch {
-		case isNotificationSoundFileKey(currentTable, key):
-			soundFile, err := parseTomlString(value)
-			if err != nil {
-				return fmt.Errorf("line %d: %w", lineIndex+1, err)
-			}
-			config.NotificationSoundFile = soundFile
-		case isNotificationSoundTableKey(currentTable, key):
-			soundFile, err := parseTomlString(value)
-			if err != nil {
-				return fmt.Errorf("line %d: %w", lineIndex+1, err)
-			}
-			config.Notification.SoundFile = soundFile
-		}
-	}
-
-	return nil
-}
-
-func isNotificationSoundFileKey(table, key string) bool {
-	normalizedTable := strings.ToLower(strings.TrimSpace(table))
-	normalizedKey := strings.ToLower(strings.TrimSpace(key))
-
-	return normalizedTable == "" &&
-		(normalizedKey == "notification_sound_file" || normalizedKey == "notification.sound_file")
-}
-
-func isNotificationSoundTableKey(table, key string) bool {
-	normalizedTable := strings.ToLower(strings.TrimSpace(table))
-	normalizedKey := strings.ToLower(strings.TrimSpace(key))
-
-	return normalizedTable == "notification" && normalizedKey == "sound_file"
-}
-
-func parseTomlString(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", nil
-	}
-
-	if strings.HasPrefix(raw, "\"") {
-		unquotedValue, err := strconv.Unquote(raw)
-		if err != nil {
-			return "", fmt.Errorf("invalid quoted string %q", raw)
-		}
-		return unquotedValue, nil
-	}
-
-	if strings.HasPrefix(raw, "'") && strings.HasSuffix(raw, "'") && len(raw) >= 2 {
-		return raw[1 : len(raw)-1], nil
-	}
-
-	// Fallback for unquoted values.
-	return raw, nil
-}
-
-func stripInlineComment(s string) string {
-	inSingle := false
-	inDouble := false
-	escaped := false
-
-	for i := 0; i < len(s); i++ {
-		ch := s[i]
-		if escaped {
-			escaped = false
-			continue
-		}
-
-		switch ch {
-		case '\\':
-			if inDouble {
-				escaped = true
-			}
-		case '"':
-			if !inSingle {
-				inDouble = !inDouble
-			}
-		case '\'':
-			if !inDouble {
-				inSingle = !inSingle
-			}
-		case '#':
-			if !inSingle && !inDouble {
-				return s[:i]
-			}
-		}
-	}
-
-	return s
 }
 
 func expandHome(path string) string {

@@ -366,7 +366,7 @@ func (m *model) updateTracking(msg tea.Msg) (tea.Model, tea.Cmd) {
 			notify.SendAsync(
 				notifyTitleKeepRun,
 				fmt.Sprintf("引き続き [%s] %s を継続します。", m.trackingProj, m.trackingTask),
-				m.notificationSoundPath,
+				"",
 			)
 		}
 

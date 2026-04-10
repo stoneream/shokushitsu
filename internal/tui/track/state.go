@@ -46,7 +46,8 @@ type trackingState struct {
 	now                  time.Time
 	task                 string
 	project              string
-	lastPromptMin        int
+	lastPromptMinute     int
+	hasPrompted          bool
 	continueCheckActive  bool
 	continueCheckDueTime time.Time
 	firstCtrlCAt         time.Time
@@ -67,7 +68,6 @@ type appState struct {
 	tracking         trackingState
 	notice           string
 	result           Result
-	doneMessage      string
 	runErr           error
 	notificationPath string
 }
@@ -90,6 +90,9 @@ func newApp(ctx context.Context, store *sqlite.Store, notificationSoundPath stri
 	app := &appState{
 		ctx:   ctx,
 		store: store,
+		result: Result{
+			Action: ActionQuit,
+		},
 		taskSelect: taskSelectState{
 			filter: taskFilter,
 		},
@@ -204,12 +207,12 @@ func (app *appState) startSession(projectID, taskID int64, projectName, taskName
 	app.tracking.now = now
 	app.tracking.project = projectName
 	app.tracking.task = taskName
-	app.tracking.lastPromptMin = -1
+	app.tracking.lastPromptMinute = 0
+	app.tracking.hasPrompted = false
 	app.tracking.continueCheckActive = false
 	app.tracking.continueCheckDueTime = time.Time{}
 	app.tracking.firstCtrlCAt = time.Time{}
 	app.notice = ""
-	app.doneMessage = ""
 	return nil
 }
 
@@ -218,7 +221,8 @@ func (app *appState) resetTracking() {
 	app.tracking.now = time.Time{}
 	app.tracking.task = ""
 	app.tracking.project = ""
-	app.tracking.lastPromptMin = -1
+	app.tracking.lastPromptMinute = 0
+	app.tracking.hasPrompted = false
 	app.tracking.continueCheckActive = false
 	app.tracking.continueCheckDueTime = time.Time{}
 	app.tracking.firstCtrlCAt = time.Time{}
@@ -239,10 +243,11 @@ func (app *appState) shouldTriggerContinueCheck() bool {
 		return false
 	}
 
-	if elapsedMinutes == app.tracking.lastPromptMin {
+	if app.tracking.hasPrompted && elapsedMinutes == app.tracking.lastPromptMinute {
 		return false
 	}
 
-	app.tracking.lastPromptMin = elapsedMinutes
+	app.tracking.lastPromptMinute = elapsedMinutes
+	app.tracking.hasPrompted = true
 	return true
 }

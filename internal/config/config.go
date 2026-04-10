@@ -95,12 +95,11 @@ func ResolveNotificationSoundPath(configPath, rawPath string) string {
 		return filepath.Clean(notificationSoundPath)
 	}
 
-	baseDir := "."
-	if configPath != "" {
-		baseDir = filepath.Dir(configPath)
+	if configPath == "" {
+		return filepath.Clean(filepath.Join(".", notificationSoundPath))
 	}
 
-	return filepath.Clean(filepath.Join(baseDir, notificationSoundPath))
+	return filepath.Clean(filepath.Join(filepath.Dir(configPath), notificationSoundPath))
 }
 
 func parseConfigToml(data string, config *Config) error {

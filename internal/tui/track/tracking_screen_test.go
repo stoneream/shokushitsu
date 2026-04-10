@@ -14,10 +14,9 @@ func TestTrackingScreenTickShowsContinuePromptAtTwentyFiveMinutes(t *testing.T) 
 	app := &appState{
 		currentSession: &sqlite.Session{StartedAt: startedAt},
 		tracking: trackingState{
-			now:           startedAt,
-			project:       "alpha",
-			task:          "task-a",
-			lastPromptMin: -1,
+			now:     startedAt,
+			project: "alpha",
+			task:    "task-a",
 		},
 	}
 
@@ -39,10 +38,9 @@ func TestTrackingScreenTickShowsBreakPromptAtFiftyMinutes(t *testing.T) {
 	app := &appState{
 		currentSession: &sqlite.Session{StartedAt: startedAt},
 		tracking: trackingState{
-			now:           startedAt,
-			project:       "alpha",
-			task:          "task-a",
-			lastPromptMin: -1,
+			now:     startedAt,
+			project: "alpha",
+			task:    "task-a",
 		},
 	}
 

@@ -94,7 +94,6 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 			}
 
 			screen.app.resetTracking()
-			screen.app.doneMessage = ""
 			screen.app.notice = message
 			screen.app.taskSelect.filter.Focus()
 			screen.app.clampTaskCursor()
@@ -107,7 +106,10 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 				return nil
 			}
 
-			screen.app.doneMessage = "強制終了しました。セッションは未終了のままです。"
+			screen.app.result = Result{
+				Action:  ActionQuit,
+				Message: "強制終了しました。セッションは未終了のままです。",
+			}
 			return nav.Quit()
 		case "c":
 			if !screen.app.tracking.continueCheckActive {

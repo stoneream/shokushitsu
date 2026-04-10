@@ -30,6 +30,9 @@ func TestNewAppStartsAtProjectSelectWhenNoTasks(t *testing.T) {
 	if app.notice == "" {
 		t.Fatal("expected initial notice when no tasks exist")
 	}
+	if app.result.Action != ActionQuit {
+		t.Fatalf("expected default action %q, got %q", ActionQuit, app.result.Action)
+	}
 }
 
 func TestTaskSelectEnterStartsTracking(t *testing.T) {

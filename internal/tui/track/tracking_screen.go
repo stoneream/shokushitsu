@@ -47,12 +47,22 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 		}
 
 		if screen.app.shouldTriggerContinueCheck() {
+			elapsedMinutes := int(screen.app.tracking.now.Sub(screen.app.currentSession.StartedAt).Minutes())
+			var notice string
+			var message string
+			if elapsedMinutes%50 == 0 {
+				notice = "休憩しませんか？ cで継続、eで終了します。"
+				message = "休憩しませんか？"
+			} else {
+				notice = "25分経過しました。cで継続、eで終了します。"
+				message = "25分経過しました。作業を継続しますか？"
+			}
 			screen.app.tracking.continueCheckActive = true
 			screen.app.tracking.continueCheckDueTime = screen.app.tracking.now.Add(continueTimeout)
-			screen.app.notice = "25分経過しました。cで継続、eで終了します。"
+			screen.app.notice = notice
 			notify.SendAsync(
 				notifyTitlePrompt,
-				"25分経過しました。作業を継続しますか？",
+				message,
 				screen.app.notificationPath,
 			)
 		}

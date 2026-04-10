@@ -42,7 +42,7 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 			notify.SendAsync(
 				notifyTitleKeepRun,
 				fmt.Sprintf("引き続き [%s] %s を継続します。", screen.app.tracking.project, screen.app.tracking.task),
-				screen.app.notificationPath,
+				"",
 			)
 		}
 

@@ -62,6 +62,7 @@ type appState struct {
 	choices      []choice
 	menuCursor   int
 	summaryDates []string
+	windowHeight int
 	result       Result
 }
 
@@ -78,9 +79,12 @@ func (screen *menuScreen) Init(lib.Navigator) tea.Cmd {
 }
 
 func (screen *menuScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch keyMsg := msg.(type) {
+	switch typedMsg := msg.(type) {
+	case tea.WindowSizeMsg:
+		screen.app.windowHeight = typedMsg.Height
+		return nil
 	case tea.KeyMsg:
-		switch keyMsg.String() {
+		switch typedMsg.String() {
 		case "up", "k":
 			screen.app.menuCursor--
 			if screen.app.menuCursor < 0 {
@@ -154,9 +158,12 @@ func (screen *summaryDateScreen) Init(lib.Navigator) tea.Cmd {
 }
 
 func (screen *summaryDateScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch keyMsg := msg.(type) {
+	switch typedMsg := msg.(type) {
+	case tea.WindowSizeMsg:
+		screen.app.windowHeight = typedMsg.Height
+		return nil
 	case tea.KeyMsg:
-		switch keyMsg.String() {
+		switch typedMsg.String() {
 		case "up", "k":
 			screen.cursor--
 			if screen.cursor < 0 {
@@ -193,6 +200,8 @@ func (screen *summaryDateScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd 
 }
 
 func (screen *summaryDateScreen) View() string {
+	pagination := lib.Paginate(len(screen.app.summaryDates), screen.cursor, screen.app.windowHeight, screen.summaryReservedLines())
+
 	var builder strings.Builder
 	builder.WriteString(styleTitle.Render("summary"))
 	builder.WriteString("\n")
@@ -202,7 +211,8 @@ func (screen *summaryDateScreen) View() string {
 	if len(screen.app.summaryDates) == 0 {
 		builder.WriteString(styleError.Render("サマリー対象の日付がありません"))
 	} else {
-		for index, summaryDate := range screen.app.summaryDates {
+		for index := pagination.Start; index < pagination.End; index++ {
+			summaryDate := screen.app.summaryDates[index]
 			cursor := "  "
 			if index == screen.cursor {
 				cursor = styleCursor.Render("> ")
@@ -219,7 +229,23 @@ func (screen *summaryDateScreen) View() string {
 	if len(screen.app.summaryDates) == 0 {
 		builder.WriteString("\n\n" + styleGuide.Render("Esc: 戻る  Ctrl+C: 終了"))
 	} else {
-		builder.WriteString("\n" + styleGuide.Render("Enter: 実行  Esc: 戻る  ↑/↓: 移動  Ctrl+C: 終了"))
+		builder.WriteString("\n" + styleGuide.Render(screen.summaryGuide(pagination)))
 	}
 	return builder.String()
+}
+
+func (screen *summaryDateScreen) summaryReservedLines() int {
+	if screen.notice != "" {
+		return 6
+	}
+	return 5
+}
+
+func (screen *summaryDateScreen) summaryGuide(pagination lib.Pagination) string {
+	guide := "Enter: 実行  Esc: 戻る  ↑/↓: 移動  Ctrl+C: 終了"
+	status := pagination.StatusLabel(len(screen.app.summaryDates))
+	if status == "" {
+		return guide
+	}
+	return fmt.Sprintf("%s  (%s)", guide, status)
 }

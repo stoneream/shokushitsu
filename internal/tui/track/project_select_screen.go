@@ -1,6 +1,7 @@
 package track
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,9 +21,12 @@ func (screen *projectSelectScreen) Init(lib.Navigator) tea.Cmd {
 }
 
 func (screen *projectSelectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch keyMsg := msg.(type) {
+	switch typedMsg := msg.(type) {
+	case tea.WindowSizeMsg:
+		screen.app.windowHeight = typedMsg.Height
+		return nil
 	case tea.KeyMsg:
-		switch keyMsg.String() {
+		switch typedMsg.String() {
 		case "ctrl+c":
 			return nav.Quit()
 		case "esc":
@@ -67,11 +71,15 @@ func (screen *projectSelectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cm
 }
 
 func (screen *projectSelectScreen) View() string {
+	choices := screen.app.projectChoices()
+	pagination := lib.Paginate(len(choices), screen.app.projectSelect.cursor, screen.app.windowHeight, screen.projectSelectReservedLines())
+
 	var builder strings.Builder
 	builder.WriteString(styleTitle.Render("プロジェクト選択"))
 	builder.WriteString("\n\n")
 
-	for index, choice := range screen.app.projectChoices() {
+	for index := pagination.Start; index < pagination.End; index++ {
+		choice := choices[index]
 		cursor := "  "
 		if index == screen.app.projectSelect.cursor {
 			cursor = styleCursor.Render("> ")
@@ -89,6 +97,22 @@ func (screen *projectSelectScreen) View() string {
 		builder.WriteString("\n" + styleNotice.Render(screen.app.notice) + "\n")
 	}
 
-	builder.WriteString("\nEnter: 決定  ↑/↓: 移動  Esc: 戻る  Ctrl+C: 終了")
+	builder.WriteString("\n" + screen.projectGuide(pagination, len(choices)))
 	return builder.String()
+}
+
+func (screen *projectSelectScreen) projectSelectReservedLines() int {
+	if screen.app.notice != "" {
+		return 6
+	}
+	return 4
+}
+
+func (screen *projectSelectScreen) projectGuide(pagination lib.Pagination, total int) string {
+	guide := "Enter: 決定  ↑/↓: 移動  Esc: 戻る  Ctrl+C: 終了"
+	status := pagination.StatusLabel(total)
+	if status == "" {
+		return guide
+	}
+	return fmt.Sprintf("%s  (%s)", guide, status)
 }

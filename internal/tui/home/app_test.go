@@ -1,6 +1,7 @@
 package home
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -74,5 +75,40 @@ func TestSummaryDateSelectionNoDates(t *testing.T) {
 	}
 	if current.notice == "" {
 		t.Fatal("expected notice for no selectable dates")
+	}
+}
+
+func TestSummaryDateViewPaginatesToWindowHeight(t *testing.T) {
+	t.Parallel()
+
+	app := &appState{
+		windowHeight: 7,
+		summaryDates: []string{
+			"2026-03-06",
+			"2026-03-05",
+			"2026-03-04",
+			"2026-03-03",
+		},
+	}
+	screen := newSummaryDateScreen(app)
+
+	firstPage := screen.View()
+	if !strings.Contains(firstPage, "2026-03-06") || !strings.Contains(firstPage, "2026-03-05") {
+		t.Fatalf("expected first page dates to be visible: %s", firstPage)
+	}
+	if strings.Contains(firstPage, "2026-03-04") || strings.Contains(firstPage, "2026-03-03") {
+		t.Fatalf("expected later page dates to be hidden: %s", firstPage)
+	}
+
+	screen.cursor = 3
+	secondPage := screen.View()
+	if !strings.Contains(secondPage, "2026-03-04") || !strings.Contains(secondPage, "2026-03-03") {
+		t.Fatalf("expected second page dates to be visible: %s", secondPage)
+	}
+	if strings.Contains(secondPage, "2026-03-06") || strings.Contains(secondPage, "2026-03-05") {
+		t.Fatalf("expected first page dates to be hidden: %s", secondPage)
+	}
+	if !strings.Contains(secondPage, "(3-4/4)") {
+		t.Fatalf("expected paging status to be shown: %s", secondPage)
 	}
 }

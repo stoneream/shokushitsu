@@ -54,13 +54,5 @@ func Run(ctx context.Context, store *sqlite.Store, notificationSoundPath string)
 		return Result{}, app.runErr
 	}
 
-	result := app.result
-	if result.Action == "" {
-		result.Action = ActionQuit
-	}
-	if result.Message == "" {
-		result.Message = app.doneMessage
-	}
-
-	return result, nil
+	return app.result, nil
 }

@@ -42,17 +42,27 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 			notify.SendAsync(
 				notifyTitleKeepRun,
 				fmt.Sprintf("引き続き [%s] %s を継続します。", screen.app.tracking.project, screen.app.tracking.task),
-				screen.app.notificationPath,
+				"",
 			)
 		}
 
 		if screen.app.shouldTriggerContinueCheck() {
+			elapsedMinutes := int(screen.app.tracking.now.Sub(screen.app.currentSession.StartedAt).Minutes())
+			var notice string
+			var message string
+			if elapsedMinutes%50 == 0 {
+				notice = "休憩しませんか？ cで継続、eで終了します。"
+				message = "休憩しませんか？"
+			} else {
+				notice = "25分経過しました。cで継続、eで終了します。"
+				message = "25分経過しました。作業を継続しますか？"
+			}
 			screen.app.tracking.continueCheckActive = true
 			screen.app.tracking.continueCheckDueTime = screen.app.tracking.now.Add(continueTimeout)
-			screen.app.notice = "25分経過しました。cで継続、eで終了します。"
+			screen.app.notice = notice
 			notify.SendAsync(
 				notifyTitlePrompt,
-				"25分経過しました。作業を継続しますか？",
+				message,
 				screen.app.notificationPath,
 			)
 		}
@@ -84,7 +94,6 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 			}
 
 			screen.app.resetTracking()
-			screen.app.doneMessage = ""
 			screen.app.notice = message
 			screen.app.taskSelect.filter.Focus()
 			screen.app.clampTaskCursor()
@@ -97,7 +106,10 @@ func (screen *trackingScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 				return nil
 			}
 
-			screen.app.doneMessage = "強制終了しました。セッションは未終了のままです。"
+			screen.app.result = Result{
+				Action:  ActionQuit,
+				Message: "強制終了しました。セッションは未終了のままです。",
+			}
 			return nav.Quit()
 		case "c":
 			if !screen.app.tracking.continueCheckActive {

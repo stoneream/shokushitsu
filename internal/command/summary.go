@@ -64,12 +64,14 @@ func newSummaryCmd() *cobra.Command {
 			if len(items) == 0 {
 				fmt.Fprintln(cmd.OutOrStdout(), "終了済みセッションはありません。")
 			} else {
-				currentProject := ""
+				isFirstProject := true
+				var currentProject string
 				for _, item := range items {
 					if item.ProjectName != currentProject {
-						if currentProject != "" {
+						if !isFirstProject {
 							fmt.Fprintln(cmd.OutOrStdout())
 						}
+						isFirstProject = false
 						currentProject = item.ProjectName
 						fmt.Fprintf(cmd.OutOrStdout(), "【%s】\n", currentProject)
 					}

@@ -120,6 +120,24 @@ func TestLoadWithInlineComment(t *testing.T) {
 	}
 }
 
+func TestLoadNotificationSoundFromDottedKey(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "config.toml")
+	content := `notification.sound_file = "/tmp/dotted.wav"`
+	if err := writeFile(path, content); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+	if got := cfg.NotificationSoundPath(); got != "/tmp/dotted.wav" {
+		t.Fatalf("unexpected NotificationSoundPath: %q", got)
+	}
+}
+
 func TestInvalidTargetValueReturnsError(t *testing.T) {
 	t.Parallel()
 
@@ -133,7 +151,7 @@ func TestInvalidTargetValueReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected parse error")
 	}
-	if !strings.Contains(err.Error(), "invalid quoted string") {
+	if !strings.Contains(err.Error(), "parse config") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

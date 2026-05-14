@@ -59,6 +59,7 @@ type appState struct {
 
 	tasks            []sqlite.RecentTask
 	projects         []sqlite.Project
+	windowHeight     int
 	selectedProject  *sqlite.Project
 	taskSelect       taskSelectState
 	projectSelect    projectSelectState

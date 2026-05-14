@@ -22,9 +22,12 @@ func (screen *taskSelectScreen) Init(lib.Navigator) tea.Cmd {
 }
 
 func (screen *taskSelectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
-	switch keyMsg := msg.(type) {
+	switch typedMsg := msg.(type) {
+	case tea.WindowSizeMsg:
+		screen.app.windowHeight = typedMsg.Height
+		return nil
 	case tea.KeyMsg:
-		switch keyMsg.String() {
+		switch typedMsg.String() {
 		case "ctrl+c":
 			return nav.Quit()
 		case "esc":
@@ -71,13 +74,17 @@ func (screen *taskSelectScreen) Update(msg tea.Msg, nav lib.Navigator) tea.Cmd {
 }
 
 func (screen *taskSelectScreen) View() string {
+	choices := screen.app.filteredTaskChoices()
+	pagination := lib.Paginate(len(choices), screen.app.taskSelect.cursor, screen.app.windowHeight, screen.taskSelectReservedLines())
+
 	var builder strings.Builder
 	builder.WriteString(styleTitle.Render("タスク選択"))
 	builder.WriteString("\n\n")
 	builder.WriteString(screen.app.taskSelect.filter.View())
 	builder.WriteString("\n\n")
 
-	for index, choice := range screen.app.filteredTaskChoices() {
+	for index := pagination.Start; index < pagination.End; index++ {
+		choice := choices[index]
 		cursor := "  "
 		if index == screen.app.taskSelect.cursor {
 			cursor = styleCursor.Render("> ")
@@ -100,6 +107,22 @@ func (screen *taskSelectScreen) View() string {
 		builder.WriteString("\n" + styleNotice.Render(screen.app.notice) + "\n")
 	}
 
-	builder.WriteString("\nEnter: 決定  ↑/↓: 移動  Esc: 戻る  Ctrl+C: 終了")
+	builder.WriteString("\n" + screen.taskGuide(pagination, len(choices)))
 	return builder.String()
+}
+
+func (screen *taskSelectScreen) taskSelectReservedLines() int {
+	if screen.app.notice != "" {
+		return 8
+	}
+	return 6
+}
+
+func (screen *taskSelectScreen) taskGuide(pagination lib.Pagination, total int) string {
+	guide := "Enter: 決定  ↑/↓: 移動  Esc: 戻る  Ctrl+C: 終了"
+	status := pagination.StatusLabel(total)
+	if status == "" {
+		return guide
+	}
+	return fmt.Sprintf("%s  (%s)", guide, status)
 }

@@ -9,7 +9,7 @@ require (
 	github.com/gen2brain/beeep v0.11.2
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/spf13/cobra v1.10.2
-	modernc.org/sqlite v1.51.0
+	modernc.org/sqlite v1.52.0
 )
 
 require (

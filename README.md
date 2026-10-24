@@ -54,17 +54,14 @@ shoku
 `c` を押すと継続します。  
 15分入力がない場合は自動で継続として扱います。  
 
-## 開発
-
-- Go
-- `just`（任意）
+## development
 
 ```bash
+mise trust
+mise install
+
+just check
 just build
-
-# or
-
-go build -o bin/shoku ./cmd/shoku
 ```
 
 ## その他

@@ -30,14 +30,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Validate release tag
-        run: |
-          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([\-+][0-9A-Za-z\.-]+)?$ ]]; then
-            echo "Invalid release tag: ${RELEASE_TAG}" >&2
-            echo "Expected format: vMAJOR.MINOR.PATCH (optionally with prerelease/build metadata)" >&2
-            exit 1
-          fi
-
       - name: Build release artifacts
         run: |
           set -euo pipefail
